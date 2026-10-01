@@ -16,7 +16,7 @@
 | [`backend/Dockerfile`](backend/Dockerfile) | 建置 FastAPI 映像；只安裝 API 所需依賴，不安裝 Streamlit。 |
 | [`compose.yaml`](compose.yaml) | 從公開原始碼建置並啟動前後端。 |
 | [`deploy/docker-hub/`](deploy/docker-hub/) | 已發布私人 Docker Hub 映像的 Compose 設定與 Windows 啟停檔。 |
-| [`scripts/repair-codespaces-network.sh`](scripts/repair-codespaces-network.sh) | 只在 Codespaces 的 Docker 橋接網路被主機防火牆阻擋時，修復本專案容器間連線。 |
+| [`scripts/start-codespaces.sh`](scripts/start-codespaces.sh) | 在 GitHub Codespaces 啟動前後端，必要時修復容器間的橋接網路。 |
 
 ## 方式 A：在另一台 Windows 電腦直接從 Docker Hub 下載
 
@@ -54,7 +54,14 @@ docker compose up --build --detach --wait
 
 ### GitHub Codespaces 登入逾時
 
-Codespaces 是雲端開發環境，請從「連接埠 / Ports」分頁找到 `8080`，點「在瀏覽器中開啟 / Open in Browser」。網站網址會是 `https://<codespace 名稱>-8080.app.github.dev/`，與區網 IP 不同。`8080` 預設為 **Private**，其他成員不能只憑這個網址進入；若要共同展示，請用上面的 Docker Desktop 部署方式。
+Codespaces 是雲端開發環境。在每個新的 Codespace 中，開啟終端機，確認目前目錄為本 repo 根目錄，然後執行：
+
+```bash
+git pull --ff-only
+bash scripts/start-codespaces.sh
+```
+
+腳本會建立前後端容器、測試 Web 到 API 的連線；只有在舊版 `FORWARD` 規則阻擋 Compose 橋接網路時，才為**目前容器共用的橋接網路**加入允許規則。它會自行取得容器網路 ID，不依賴 Codespace 名稱或固定 IP。完成後，從「連接埠 / Ports」分頁找到 `8080`，點「在瀏覽器中開啟 / Open in Browser」。網站網址會是 `https://<codespace 名稱>-8080.app.github.dev/`，與區網 IP 不同。`8080` 預設為 **Private**，其他成員不能只憑這個網址進入；若要共同展示，請用上面的 Docker Desktop 部署方式。
 
 若首頁能開啟，但 `/api/v1/ready` 或登入仍逾時，請在 Codespaces 的專案根目錄執行：
 
