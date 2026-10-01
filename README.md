@@ -47,6 +47,10 @@ docker compose up --build --detach --wait
 
 停止服務：`docker compose down`。這會保留 Docker named volume；不要用 `down --volumes`，除非確定要清空展示資料。
 
+### 區網登入一直顯示「登入中」
+
+在使用者的電腦，先開啟 `http://<執行 Docker 電腦的區網 IPv4>:8080/api/v1/ready`；正常應看到 `{"status":"ready"}`。若打不開，確認 Docker 主機的 `.env` 已設定 `ERP_WEB_BIND=0.0.0.0`、8080 埠沒有被占用，且 Windows 防火牆允許區網連入 TCP 8080。若看到 502/504，請在 Docker 主機的專案根目錄執行 `docker compose ps` 和 `docker compose logs --tail 80 web api`，查看 API 啟動錯誤。若 ready 正常但仍卡在登入，請在瀏覽器開發者工具的「Network／網路」檢查 `POST /api/v1/session` 的狀態；新版前端會在 15 秒後顯示逾時訊息，不會無限轉圈。更新公開原始碼後須重新執行 `docker compose up --build --detach --wait`，讓 Web 容器載入新版本。
+
 ## 展示資料與登入
 
 第一次啟動會建立明確標示為「DEMO 合成資料」的供應鏈風險範例，用於展示風險地圖、新聞審查、What-if、提案與證據流程。展示帳號為 `viewer / viewer`、`planner / planner`、`approver / approver`。這些簡單帳密只適合可信任的展示網路，不適合直接對公網開放。

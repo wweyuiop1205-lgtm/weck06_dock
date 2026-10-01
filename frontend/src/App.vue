@@ -112,7 +112,11 @@ async function run(task: () => Promise<void>) {
   busy.value = true
   error.value = ''
   notice.value = ''
-  try { await task() } catch (e) { error.value = e instanceof Error ? e.message : '發生錯誤' }
+  try { await task() } catch (e) {
+    error.value = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+      ? '登入連線逾時。請確認網址後方的 /api/v1/ready 可正常開啟，並檢查 Docker 容器狀態。'
+      : e instanceof Error ? e.message : '發生錯誤'
+  }
   finally { busy.value = false }
 }
 
@@ -120,6 +124,7 @@ async function signIn() {
   await run(async () => {
     const result = await api<{ user: Principal; csrf_token: string }>('/session', {
       method: 'POST', body: JSON.stringify({ username: username.value, password: password.value }),
+      signal: AbortSignal.timeout(15000),
     })
     user.value = result.user
     setCsrf(result.csrf_token)
@@ -438,6 +443,7 @@ async function decide(outcome: 'approve' | 'reject') {
             <div class="entry-field"><label for="entry-username">帳號</label><input id="entry-username" v-model.trim="username" autocomplete="username" placeholder="輸入帳號" required></div>
             <div class="entry-field"><div class="entry-field-heading"><label for="entry-password">密碼</label><button type="button" class="entry-visibility" :aria-pressed="showPassword" @click="showPassword = !showPassword">{{ showPassword ? '隱藏密碼' : '顯示密碼' }}</button></div><input id="entry-password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="輸入密碼" required></div>
             <button class="entry-submit" :disabled="busy">{{ busy ? '登入中…' : '登入' }}<span aria-hidden="true">↗</span></button>
+            <p v-if="error" class="message error entry-login-error" role="alert">{{ error }}</p>
           </form>
           <div class="entry-login-foot"><span class="entry-foot-symbol" aria-hidden="true">◆</span><p>依身分啟用功能權限。關鍵採購決策仍由人員核准。</p></div>
         </section>
@@ -598,7 +604,7 @@ async function decide(outcome: 'approve' | 'reject') {
       </main>
     </template>
 
-    <div v-if="error" class="message error" role="alert">{{ error }}</div>
+    <div v-if="error && user" class="message error" role="alert">{{ error }}</div>
     <div v-if="notice" class="message success" role="status">{{ notice }}</div>
   </div>
 </template>
