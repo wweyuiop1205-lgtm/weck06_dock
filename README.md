@@ -36,6 +36,8 @@ cd .\erp-risk-demo
 安裝 Git 與 Docker Desktop，複製本 repo 後在專案根目錄執行：
 
 ```powershell
+git clone https://github.com/wweyuiop1205-lgtm/weck06_dock.git
+cd .\weck06_dock
 docker compose up --build --detach --wait
 ```
 
