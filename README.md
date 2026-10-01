@@ -4,6 +4,8 @@
 
 本 repo 提供兩種啟動方式：有 `weck06` Docker Hub 私人倉庫權限的人可直接拉取已驗證映像；其他人可從公開原始碼自行建置。**GitHub repo 公開，但 Docker Hub 的 `weck06/erp-risk-demo` 仍是私人倉庫**，公開原始碼不會讓其他帳號自動取得私人映像。
 
+要在會議上介紹元件、資料流、L1→L2→L3 流程及設計理由，請看[系統架構與流程說明（會議版）](docs/ARCHITECTURE.zh.md)。
+
 ## 資料夾
 
 | 路徑 | 用途 |
