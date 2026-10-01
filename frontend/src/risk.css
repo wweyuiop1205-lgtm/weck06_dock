@@ -1,0 +1,41 @@
+.geo-map {
+  position: relative;
+  height: 330px;
+  margin: 22px 0 8px;
+  border: 1px solid #bcd1dc;
+  border-radius: 12px;
+  overflow: hidden;
+  background: repeating-linear-gradient(0deg, transparent 0, transparent calc(25% - 1px), #d6e4eb calc(25% - 1px), #d6e4eb 25%), repeating-linear-gradient(90deg, #eaf3f7 0, #eaf3f7 calc(25% - 1px), #d6e4eb calc(25% - 1px), #d6e4eb 25%);
+}
+.geo-map::before { content: '赤道'; position: absolute; top: 49%; left: 8px; color: #7893a3; font-size: 12px; }
+.geo-label { position: absolute; color: #68859a; font-size: 11px; }
+.geo-label.north { top: 8px; left: 8px; }
+.geo-label.south { bottom: 8px; left: 8px; }
+.geo-label.west { bottom: 8px; left: 75px; }
+.geo-label.east { bottom: 8px; right: 8px; }
+.geo-point { position: absolute; width: 18px; height: 18px; border: 2px solid #fff; border-radius: 50%; padding: 0; transform: translate(-50%, -50%); box-shadow: 0 1px 6px #17324c77; }
+.geo-point:hover, .geo-point:focus-visible { width: 25px; height: 25px; z-index: 2; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.answer { white-space: pre-wrap; line-height: 1.7; }
+.decision-detail { margin-top: 16px; }
+.decision-detail .actions { flex-wrap: wrap; }
+.erp-source { margin: 10px 0; border: 1px solid #dbe5ec; border-radius: 8px; padding: 8px 12px; }
+.erp-source summary { cursor: pointer; font-weight: 700; }
+.erp-source pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.news-toolbar { display: flex; align-items: end; gap: 12px; margin: 20px 0; }
+.news-toolbar label { width: 180px; }
+.news-filter { max-width: 300px; margin: 18px 0; }
+.news-card { border: 1px solid #dbe5ec; border-radius: 12px; padding: 18px; margin: 12px 0; background: #fbfdfe; }
+.news-card-head { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
+.news-card-head h3 { margin: 0; }
+.news-card-head span { white-space: nowrap; color: #346d90; font-weight: 700; }
+.news-card .answer { margin: 14px 0; }
+.news-review { border-top: 1px solid #dbe5ec; margin-top: 15px; padding-top: 15px; }
+.news-history { margin: 10px 0; }
+.news-history .rows { margin-top: 8px; }
+.risk-event-row { flex-wrap: wrap; }
+.risk-event-row .retract-form { flex-basis: 100%; display: grid; gap: 10px; }
+.retracted-events { margin-top: 24px; }
+.retracted-events summary { cursor: pointer; font-weight: 700; }
+@media (max-width: 620px) { .field-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .news-toolbar, .news-card-head { flex-direction: column; align-items: stretch; } .news-toolbar label { width: 100%; } }

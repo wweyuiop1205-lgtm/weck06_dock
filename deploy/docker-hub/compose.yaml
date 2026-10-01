@@ -1,0 +1,49 @@
+name: erp-risk-hub
+
+services:
+  api:
+    image: ${DOCKERHUB_NAMESPACE:-weck06}/erp-risk-demo:api-${ERP_IMAGE_VERSION:-bd37ee0}
+    command: ["sh", "-c", "python -m api.meeting_seed && exec uvicorn api.main:app --host 0.0.0.0 --port 8000"]
+    environment:
+      ERP_DB_PATH: /var/lib/erp/erp.db
+      ERP_DEMO_MODE: "true"
+      ERP_ENABLE_DEMO_SEED: "true"
+      ERP_ORGANIZATION_ID: demo-org
+      ERP_COOKIE_SECURE: "false"
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_ANALYSIS_MODEL: ${LLM_ANALYSIS_MODEL:-}
+      LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
+      LLM_EXTRA_HEADERS: ${LLM_EXTRA_HEADERS:-}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+      GNEWS_API_KEY: ${GNEWS_API_KEY:-}
+    volumes:
+      - erp_hub_data:/var/lib/erp
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    restart: unless-stopped
+
+  web:
+    image: ${DOCKERHUB_NAMESPACE:-weck06}/erp-risk-demo:web-${ERP_IMAGE_VERSION:-bd37ee0}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:${ERP_WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  erp_hub_data:

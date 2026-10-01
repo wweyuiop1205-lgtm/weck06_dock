@@ -1,0 +1,3 @@
+FROM scratch
+COPY compose.yaml .env.example README.zh.md start-hub.ps1 start-hub.cmd stop-hub.ps1 stop-hub.cmd /launcher/
+CMD ["/launcher/README.zh.md"]
