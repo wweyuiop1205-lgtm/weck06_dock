@@ -16,6 +16,7 @@
 | [`backend/Dockerfile`](backend/Dockerfile) | 建置 FastAPI 映像；只安裝 API 所需依賴，不安裝 Streamlit。 |
 | [`compose.yaml`](compose.yaml) | 從公開原始碼建置並啟動前後端。 |
 | [`deploy/docker-hub/`](deploy/docker-hub/) | 已發布私人 Docker Hub 映像的 Compose 設定與 Windows 啟停檔。 |
+| [`scripts/repair-codespaces-network.sh`](scripts/repair-codespaces-network.sh) | 只在 Codespaces 的 Docker 橋接網路被主機防火牆阻擋時，修復本專案容器間連線。 |
 
 ## 方式 A：在另一台 Windows 電腦直接從 Docker Hub 下載
 
@@ -50,6 +51,20 @@ docker compose up --build --detach --wait
 ### 區網登入一直顯示「登入中」
 
 在使用者的電腦，先開啟 `http://<執行 Docker 電腦的區網 IPv4>:8080/api/v1/ready`；正常應看到 `{"status":"ready"}`。若打不開，確認 Docker 主機的 `.env` 已設定 `ERP_WEB_BIND=0.0.0.0`、8080 埠沒有被占用，且 Windows 防火牆允許區網連入 TCP 8080。若看到 502/504，請在 Docker 主機的專案根目錄執行 `docker compose ps` 和 `docker compose logs --tail 80 web api`，查看 API 啟動錯誤。若 ready 正常但仍卡在登入，請在瀏覽器開發者工具的「Network／網路」檢查 `POST /api/v1/session` 的狀態；新版前端會在 15 秒後顯示逾時訊息，不會無限轉圈。更新公開原始碼後須重新執行 `docker compose up --build --detach --wait`，讓 Web 容器載入新版本。
+
+### GitHub Codespaces 登入逾時
+
+Codespaces 是雲端開發環境，請從「連接埠 / Ports」分頁找到 `8080`，點「在瀏覽器中開啟 / Open in Browser」。網站網址會是 `https://<codespace 名稱>-8080.app.github.dev/`，與區網 IP 不同。`8080` 預設為 **Private**，其他成員不能只憑這個網址進入；若要共同展示，請用上面的 Docker Desktop 部署方式。
+
+若首頁能開啟，但 `/api/v1/ready` 或登入仍逾時，請在 Codespaces 的專案根目錄執行：
+
+```bash
+docker compose ps
+curl --max-time 5 http://127.0.0.1:8080/api/v1/ready
+bash scripts/repair-codespaces-network.sh
+```
+
+在這次 Codespace 中，兩個容器雖顯示 healthy，但主機的舊版 `FORWARD` 防火牆規則阻擋了 Compose 專用橋接網路，所以 Web 容器無法連到 FastAPI。修復腳本只允許**本專案橋接網路內**的容器互通，並再次驗證 API；它不會把連接埠改成 Public。Codespace 重建或重啟後，主機規則可能重置，屆時再執行一次腳本。若腳本最後仍逾時，請檢查 `docker compose logs --tail 80 web api`，不要把 Docker 顯示 healthy 當作前後端已互通的證明。
 
 ## 展示資料與登入
 
