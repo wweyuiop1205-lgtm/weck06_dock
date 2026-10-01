@@ -77,6 +77,8 @@ bash scripts/repair-codespaces-network.sh
 
 第一次啟動會建立明確標示為「DEMO 合成資料」的供應鏈風險範例，用於展示風險地圖、新聞審查、What-if、提案與證據流程。展示帳號為 `viewer / viewer`、`planner / planner`、`approver / approver`。這些簡單帳密只適合可信任的展示網路，不適合直接對公網開放。
 
+SQLite 資料庫保存在執行環境自己的 Docker named volume。重建容器或執行 `docker compose down` 會保留資料，但不同電腦與不同 Codespace 的 volume 不會同步；只抓 GitHub 程式碼或 Docker Hub 映像無法搬走既有操作紀錄。若要搬移資料，須另行備份與還原；`docker compose down --volumes` 會刪除該環境的 Demo 資料。
+
 新聞和 AI 服務不是基本展示的必要條件。若要啟用，僅在執行電腦的 `.env` 中設定模型或新聞來源金鑰；`.env` 已被 Git 忽略，請勿提交金鑰、真實 ERP 資料或資料庫。啟用外部 AI 時，What-if 的供應商、採購單與庫存內容可能送往所設定的模型服務。
 
 ## 驗證範圍

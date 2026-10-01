@@ -8,7 +8,9 @@
 
 ```mermaid
 flowchart LR
-    U[同一網路的使用者<br/>瀏覽器] -->|電腦 IP:8080| W[Web 容器<br/>Nginx + Vue 靜態頁面]
+    U[使用者瀏覽器] -->|Docker Desktop：本機或區網網址| W[Web 容器<br/>Nginx + Vue 靜態頁面]
+    U -->|Codespaces 私人轉送網址| P[GitHub Codespaces<br/>8080 連接埠轉送]
+    P --> W
     W -->|/api/v1/*<br/>容器內網路| A[API 容器<br/>FastAPI]
     A --> B[後端領域邏輯<br/>風險、新聞、提案、審批、證據]
     B --> D[(SQLite<br/>Docker named volume)]
@@ -23,16 +25,22 @@ flowchart LR
 | 領域邏輯，`backend/backend/` | 計算風險、處理新聞、建立採購提案、審批與保存證據 | 規則集中在後端，不能只靠前端畫面限制操作。 |
 | SQLite + Docker named volume | 存放 Demo 使用者、供應商、採購單、新聞、事件與操作紀錄 | 程式映像與資料分離；重建容器不會因容器刪除而清空資料。 |
 
-Web 與 API 是兩個獨立容器，由 Docker Compose 建立同一個內部網路。只有 Web 的 8080 埠對執行電腦開放；API 的 8000 埠只供 Compose 網路內的 Web 使用。跨電腦觀看時，成員開啟 `http://<執行電腦的區網 IPv4>:8080`。區網防火牆須允許該埠。
+Web 與 API 是兩個獨立容器，由 Docker Compose 建立同一個內部網路。只有 Web 的 8080 埠映射到執行環境；API 的 8000 埠只供 Compose 網路內的 Web 使用。從原始碼在 Docker Desktop 啟動時，Web 預設只綁定 `127.0.0.1`，本機開啟 `http://localhost:8080`。若要讓同一區網的成員觀看，需在 `.env` 設定 `ERP_WEB_BIND=0.0.0.0`、確認防火牆允許 8080/TCP，成員再開啟 `http://<執行電腦的區網 IPv4>:8080`。Docker Hub 啟動檔使用自己的 Compose 設定；Codespaces 則走 GitHub 的連接埠轉送，不使用執行電腦的區網 IP。
 
 ## 二、啟動時怎麼跑
 
-1. 在另一台電腦安裝並啟動 Docker Desktop，使用 Linux containers。從私人 Docker Hub 倉庫拉下 `launcher`、`web`、`api` 三個固定標籤的映像；`launcher` 只裝啟停檔及 Compose 設定，不是第四個常駐服務。另一種方式是從 GitHub 公開原始碼建置 Web 與 API。詳細指令見[根目錄 README](../README.md)。
+1. 選擇啟動環境：會議電腦可安裝 Docker Desktop（Linux containers），從私人 Docker Hub 倉庫拉下 `launcher`、`web`、`api` 三個固定標籤的映像；`launcher` 只裝啟停檔及 Compose 設定，不是第四個常駐服務。開發者也可從 GitHub 公開原始碼在 Docker Desktop 或 GitHub Codespaces 建置 Web 與 API。詳細指令見[根目錄 README](../README.md)。
 2. Compose 建立 Web、API 容器，以及獨立的 named volume。Hub 模式與原始碼建置模式的 Compose 專案名稱、volume 各自分開。
 3. API 啟動命令先執行 `api.meeting_seed`。它初始化 SQLite 結構並補上合成展示資料；既有資料會沿用，展示 fixture 避免重複建立。資料庫位於容器內 `/var/lib/erp/erp.db`，實際由 volume 保存，不要求 GitHub 有 `data/` 資料夾。
-4. API 的 `/api/v1/ready` 檢查資料庫可讀；Compose 等 API 健康後再啟動 Web。啟動腳本最後透過 Web 網址再次檢查 API，並印出本機與區網網址。
+4. API 的 `/api/v1/ready` 檢查資料庫可讀；Compose 等 API 健康後再啟動 Web。**容器各自 healthy 不等於 Web 已能連到 API**，因此還要從 Web 的 8080 網址檢查 `/api/v1/ready`。Docker Hub 啟動檔會做這項檢查並印出網址；Codespaces 啟動腳本也會檢查並在必要時修復容器間網路。
 
-**資料可攜性：**映像與原始碼帶的是程式及初始合成資料規則，不會帶走目前這台電腦的 SQLite 歷史。換電腦首次啟動是一份新的 Demo；若要保留既有操作紀錄，需另行備份及還原 named volume。一般 `docker compose down` 保留 volume；`down --volumes` 會刪除該模式的資料。
+**資料可攜性：**映像與原始碼帶的是程式及初始合成資料規則，不會帶走目前這台電腦的 SQLite 歷史。每台 Docker 主機、每個 Codespace 都有各自的 named volume；換環境首次啟動是一份新的 Demo。若要保留既有操作紀錄，需另行備份及還原資料，不能只下載 GitHub repo 或 Docker Hub 映像。一般 `docker compose down` 保留 volume；`down --volumes` 會刪除該模式的資料。刪除 Codespace 前也應先備份需要保留的資料。
+
+### Codespaces 的啟動與登入
+
+在新的 Codespace 專案根目錄執行 `git pull --ff-only` 與 `bash scripts/start-codespaces.sh`。腳本建置並啟動 Web、API，再透過 `http://127.0.0.1:8080/api/v1/ready` 驗證前後端通路；若這個 Codespace 的舊版 `FORWARD` 防火牆規則阻擋 Compose 專用橋接網路，腳本會找出目前兩個容器共用的橋接介面，只允許該橋接網路內部互通，然後重測。這項規則屬於 Codespace 執行環境，重啟或重建後可能消失；再次執行啟動腳本即可檢查。它不修改 GitHub 的連接埠可見度。
+
+開啟 Codespaces 的「Ports／連接埠」分頁，對 `8080` 選「Open in Browser」，使用 `https://<codespace 名稱>-8080.app.github.dev/` 網址。這是 GitHub 的轉送網址，與本機 `localhost`、區網 IP 是三種不同入口。`8080` 預設是 Private，其他成員不能只靠網址進入；多人展示應依上面的 Docker Desktop 區網部署方式，或另行規劃正式的受控部署。Codespaces 的操作與逾時排查指令見 [README](../README.md#github-codespaces-登入逾時)。
 
 ## 三、使用者操作時怎麼跑
 
@@ -42,7 +50,7 @@ sequenceDiagram
     participant W as Vue / Nginx
     participant A as FastAPI
     participant D as SQLite
-    U->>W: 開啟電腦 IP:8080
+    U->>W: 開啟 Web 網址（本機、區網或 Codespaces 轉送）
     W-->>U: 回傳 Vue 頁面
     U->>W: 登入或操作 /api/v1/*
     W->>A: 反向代理到 api:8000
@@ -66,9 +74,9 @@ sequenceDiagram
 ## 五、為什麼選這個部署方式
 
 - **前後端分離：**Vue 專注互動介面，FastAPI 掌管資料、規則與權限；淘汰 Streamlit 後，不再由同一個 Python 頁面兼做畫面和業務邏輯。
-- **全部在 Docker 執行：**另一台電腦主要需要 Docker Desktop；Python、Node、Nginx 等執行環境隨映像提供，降低環境差異。Web、API 可分別重建。
+- **全部在 Docker 執行：**另一台電腦主要需要 Docker Desktop；Python、Node、Nginx 等執行環境隨映像提供，降低環境差異。Web、API 可分別重建。Codespaces 也是在雲端 Docker 環境執行這兩個容器。
 - **Docker Hub 交付 + GitHub 留原始碼：**會議電腦可拉取已建好的固定標籤映像，省去現場建置；公開 GitHub 則保留可檢視、可修改、可自行建置的前後端原始碼。Hub 映像目前仍是私人倉庫，需要有權限的帳號登入。
-- **資料放 volume：**程式更新和 Demo 資料的生命週期分開。原始碼與映像不包含本機資料庫，也不應包含 API 金鑰。
+- **資料放 volume：**程式更新和 Demo 資料的生命週期分開。volume 隨各自的 Docker 主機或 Codespace 保存，不會跟著 GitHub 原始碼或 Docker Hub 映像搬移；原始碼與映像也不應包含 API 金鑰。
 - **人工審查及分層權限：**AI 是輔助判讀；新聞確認、提案送審、採購核准各有明確責任與紀錄。
 
 ## 六、會議可直接說的版本（約 90 秒）
@@ -83,4 +91,4 @@ sequenceDiagram
 
 - 本版是**單一展示組織、SQLite 與合成資料**。跨組織正式上線、備份還原、自動化部署、監控與生產級帳號管理，需要另行規劃。
 - Docker Hub 映像的版本標籤為 `bd37ee0`；另一台 Windows 電腦須能執行 Docker Desktop 的 Linux containers 及 `docker compose`，並能存取 Hub。若主機 8080 埠被占用，可在 `.env` 調整 `ERP_WEB_PORT`。
-- 區網展示已在 Compose 中開放 Web 埠，但另一台電腦的實際啟動、Windows 防火牆與第二台裝置連線，仍需現場驗收。
+- 原始碼模式的 Compose 預設只綁定本機；區網展示須先設定 `ERP_WEB_BIND=0.0.0.0`。另一台電腦的實際啟動、Windows 防火牆與第二台裝置連線，仍需現場驗收。Codespaces 腳本已在目前環境測過正常與橋接網路受阻兩種情況；其他獨立 Codespace 仍需各自驗收。
